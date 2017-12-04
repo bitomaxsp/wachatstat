@@ -75,7 +75,12 @@ def main(config, chatfile):
 
   name2msg = dict()
 
-  prog = re.compile('(\d\d/\d\d/\d\d),\s([0-9:]+)\s(AM|PM):\s([‪‬\(\)\+\s\w\d‑\-]+):(.*)')
+  prog = re.compile('(\d{1,2}/\d{1,2}/\d\d),\s([0-9:]+)\s(AM|PM):\s([‪‬\(\)\+\s\w\d‑\-]+):(.*)')
+
+  # l = '12/1/17, 4:49:33 AM: +7 968 422‑28‑24: Доброе!'
+  # result = prog.match(l)
+  # print(result)
+  # return
 
   def process_result(name, ts, text, append=False):
     if name2msg.get(name) is None:
