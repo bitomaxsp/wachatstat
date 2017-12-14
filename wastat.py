@@ -65,7 +65,9 @@ def main(config, chatfile):
 
   with open(config) as cf:
     confDict = json.load(cf)
+    # print(confDict)
 
+  groupInterval = confDict['groupInterval']
   nameMapping = confDict['nameMapping']
   assert nameMapping != None
 
@@ -76,11 +78,6 @@ def main(config, chatfile):
   name2msg = dict()
 
   prog = re.compile('(\d{1,2}/\d{1,2}/\d\d),\s([0-9:]+)\s(AM|PM):\s([‪‬\(\)\+\s\w\d‑\-]+):(.*)')
-
-  # l = '12/1/17, 4:49:33 AM: +7 968 422‑28‑24: Доброе!'
-  # result = prog.match(l)
-  # print(result)
-  # return
 
   def process_result(name, ts, text, append=False):
     if name2msg.get(name) is None:
@@ -98,28 +95,41 @@ def main(config, chatfile):
     msg_ts = None
     msg_ts_prev = None
     name2msg['Chat'] = UserChatStat('Chat')
+
+    count = 0
+    count1 = 0
+    count2 = 0
     while True:
       line = f.readline()
+      count += 1
+
       if not line:
         break
       result = prog.match(line)
       if result:
+        count1 += 1
         msg_ts = datetime.strptime(result[1]+' '+result[2], '%m/%d/%y %I:%M:%S')
         if result[3] == 'PM':
           msg_ts = datetime(msg_ts.year, msg_ts.month, msg_ts.day, msg_ts.hour+12, msg_ts.minute, msg_ts.second)
 
-        author_name = result[4]
+        author_name = result[4].encode('ascii', 'ignore').decode()
+        if (len(author_name) < 3): #HACK
+          author_name = result[4]
+
+        author_name = author_name.strip()
         # map phone to name
-        if result[4] in name_map:
-          author_name = name_map[result[4]];
+        if author_name in name_map:
+          author_name = name_map[author_name];
 
         if author_name != prev_author:
           process_result(author_name, msg_ts, result[5])
         else:
-          stride = msg_ts_prev.timestamp() - msg_ts.timestamp()
-          if stride > confDict['groupInterval']:
+          stride = msg_ts.timestamp() - msg_ts_prev.timestamp()
+          # assert stride >= 0
+          if stride > groupInterval:
             process_result(author_name, msg_ts, result[5])
           else:
+            count2 += 1
             process_result(author_name, msg_ts, line, True)
 
         msg_ts_prev = msg_ts
@@ -127,6 +137,8 @@ def main(config, chatfile):
       else:
         if author_name != '':
           process_result(author_name, msg_ts, line, True)
+
+  print('Count:', count, count1, count2)
 
   for key in name2msg:
     print(key, ':', name2msg[key].total)
